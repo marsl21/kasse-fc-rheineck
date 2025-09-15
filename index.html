@@ -13,6 +13,9 @@
       --tile-active:#2a3f71;   /* Active */
       --muted:#9ab0cf; --text:#ffffff; --accent:#e53935; --ok:#23c55e;
       --brand:#c21c2c; /* FCR Rot Touch */
+      --tile-drinks:#233a70;       /* Getränke heller */
+      --tile-drinks-hover:#2b4584;
+      --tile-drinks-active:#36529b;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
@@ -39,6 +42,7 @@
     .btn.ghost{background:transparent;border:1px dashed rgba(255,255,255,.25);color:#7a8aa0}
     .btn.warn{background:linear-gradient(180deg,#f59e0b,#d97706)}
     .btn.muted{background:#1b2338;color:#c9d4e5;border:1px solid rgba(255,255,255,.12)}
+    .btn.danger{background:linear-gradient(180deg,#ef4444,#b91c1c);color:#fff}
 
     .group{margin-bottom:12px}
     .group-title{margin:8px 4px 8px;font-weight:800;letter-spacing:.3px;color:#dbe7ff;opacity:.9}
@@ -52,6 +56,11 @@
     .item:focus-visible{box-shadow:0 0 0 3px rgba(255,255,255,.18)}
     .item .name{font-weight:900;letter-spacing:.2px;font-size:18px;color:#ffffff}
     .item .price{font-size:14px;color:#cdd6e6}
+
+    /* Gruppe Getränke heller einfärben */
+    .group[data-name="Getränke"] .item{background:var(--tile-drinks)}
+    .group[data-name="Getränke"] .item:hover{background:var(--tile-drinks-hover)}
+    .group[data-name="Getränke"] .item:active{background:var(--tile-drinks-active)}
 
     .cart-list,.sales-list{list-style:none;margin:0;padding:0}
     .row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px dashed rgba(255,255,255,.08)}
@@ -68,6 +77,8 @@
     .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
 
     .divider{height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);margin:8px 0}
+    /* Grosse Buttons rechts */
+    .btn.lg{font-size:16px;padding:16px 18px;border-radius:16px}
   </style>
 </head>
 <body>
@@ -104,9 +115,9 @@
           <ul class="cart-list" id="cart"></ul>
           <div class="total"><span>Total</span><span id="cartTotal" class="mono">CHF 0.00</span></div>
           <div class="toolbar">
-            <button class="btn ok" id="payBtn" disabled>Bezahlt</button>
-            <button class="btn warn" id="undoBtn" disabled>Letzte Position zurück</button>
-            <button class="btn ghost" id="clearCartBtn" disabled>Bon leeren</button>
+            <button class="btn ok lg" id="payBtn" disabled>Bezahlt</button>
+            <button class="btn warn lg" id="undoBtn" disabled>Letzte Position zurück</button>
+            <button class="btn ghost lg" id="clearCartBtn" disabled>Bon leeren</button>
           </div>
         </div>
       </section>
@@ -118,7 +129,7 @@
           <div class="divider"></div>
           <div class="toolbar">
             <button class="btn muted" id="summaryBtn" disabled>Zusammenfassung anzeigen</button>
-            <button class="btn" id="exportBtn" disabled>Zu Google Sheets speichern</button>
+            <button class="btn danger" id="exportBtn" disabled>Zu Google Sheets speichern</button>
             <button class="btn ghost" id="resetDayBtn" disabled>Tag zurücksetzen</button>
           </div>
           <p class="small muted" style="margin-top:8px">Hinweis: Speichern zu Google Sheets erfordert die Einrichtung eines Webhooks. "Tag zurücksetzen" löscht lokale Tagesdaten. <strong>Achtung: erst nach Abschluss zurücksetzen!</strong></p>
@@ -146,10 +157,7 @@ const CATALOG = {
     { name:'Pommes',         price: 6.00 },
   ],
   'Snacks': [
-   { name:'Snickers',         price: 1.50 },
-   { name:'Chips',         price: 1.50 },
-   { name:'Süssigkeiten',     price: 1.00 },
-   { name:'Glacé',     price: 3.00 },
+    // später ergänzen …
   ]
 };
 
@@ -201,6 +209,7 @@ function renderItems(){
   for(const [group, items] of Object.entries(CATALOG)){
     const section = document.createElement('section');
     section.className = 'group';
+    section.dataset.name = group;
     const title = document.createElement('div');
     title.className = 'group-title';
     title.textContent = group;
@@ -311,6 +320,7 @@ function renderAllSales(){
 async function exportToSheets(){
   if(!currentDay) return;
   if(!WEBHOOK_URL){ alert('Kein Google-Webhook konfiguriert. Bitte WEBHOOK_URL im Code setzen.'); return; }
+  if(!confirm('Sicher, dass du den Tag abschliessen willst?')) return;
   const payload = { day: currentDay, sales: dayData.sales };
   try{
     const res = await fetch(WEBHOOK_URL, {
@@ -386,6 +396,26 @@ function init(){
 }
 
 init();
+
+/*********************
+ * SELFTEST (optional): aufrufen mit ?selftest=1 in der URL
+ *********************/
+(function selftest(){
+  try{
+    const usp = new URLSearchParams(location.search);
+    if(!usp.has('selftest')) return;
+    console.log('[Selftest] start');
+    const oldFetch = window.fetch;
+    const oldConfirm = window.confirm;
+    window.fetch = async ()=> new Response(JSON.stringify({ ok:true, inserted:0 }), { status:200, headers:{'Content-Type':'application/json'} });
+    window.confirm = ()=> true;
+    currentDay = '2099-12-31';
+    dayData = { meta:{ openedAt:new Date().toISOString() }, sales:[{ id:'TEST', ts:new Date().toISOString(), item:'Probe', qty:1, price:1.2, total:1.2 }] };
+    exportToSheets().then(()=> console.log('[Selftest] OK')).catch(e=> console.error('[Selftest] FAIL', e)).finally(()=>{
+      window.fetch = oldFetch; window.confirm = oldConfirm;
+    });
+  }catch(e){ console.error('[Selftest] error', e); }
+})();
 </script>
 </body>
 </html>
