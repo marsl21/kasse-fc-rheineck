@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="de-CH">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>FCR Kiosk Kasse</title>
+  <style>
+    :root{
+      --bg:#0b1220; --card:#121a2b; --muted:#7a8aa0; --text:#e8eef8; --accent:#e53935; --ok:#23c55e;
+      --brand:#c21c2c; /* FCR Rot Touch */
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;background:linear-gradient(180deg,#0b1220,#0e1526 60%,#0b1220);color:var(--text)}
+    .wrap{max-width:1100px;margin-inline:auto;padding:16px;padding-bottom:120px}
+    header{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:16px}
+    h1{font-size:22px;margin:0;letter-spacing:.3px}
+    .badge{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);padding:6px 10px;border-radius:999px;font-size:12px}
+    .grid{display:grid;gap:12px}
+    .cols{grid-template-columns:1fr}
+    @media(min-width:920px){.cols{grid-template-columns:1.1fr .9fr}}
+
+    .card{background:var(--card);border:1px solid rgba(255,255,255,.1);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    .card h2{font-size:16px;margin:0 0 8px 0}
+    .card .content{padding:14px}
+
+    .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+    input[type="date"], select, input[type="text"]{background:#0e1628;border:1px solid rgba(255,255,255,.14);color:var(--text);border-radius:10px;padding:10px 12px;font-size:14px}
+    .btn{appearance:none;border:none;border-radius:12px;padding:12px 14px;font-weight:600;color:#fff;cursor:pointer;transition:transform .02s ease, opacity .2s}
+    .btn:active{transform:translateY(1px)}
+    .btn[disabled]{opacity:.5;pointer-events:none}
+    .btn.primary{background:linear-gradient(180deg,#e63b3b,#b91c1c)}
+    .btn.ok{background:linear-gradient(180deg,#22c55e,#16a34a)}
+    .btn.ghost{background:transparent;border:1px dashed rgba(255,255,255,.25);color:var(--muted)}
+    .btn.warn{background:linear-gradient(180deg,#f59e0b,#d97706)}
+    .btn.muted{background:#1b2338;color:#c9d4e5;border:1px solid rgba(255,255,255,.12)}
+
+    .items{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+    @media(min-width:560px){.items{grid-template-columns:repeat(3,1fr)}}
+    @media(min-width:920px){.items{grid-template-columns:repeat(4,1fr)}}
+    .item{background:#111a2e;border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:6px}
+    .item .name{font-weight:700}
+    .item .price{font-size:14px;color:#cdd6e6}
+    .item .add{margin-top:auto}
+
+    .cart-list,.sales-list{list-style:none;margin:0;padding:0}
+    .row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px dashed rgba(255,255,255,.08)}
+    .row:last-child{border-bottom:none}
+    .row .left{display:flex;align-items:center;gap:8px}
+    .chip{font-size:12px;padding:2px 8px;border-radius:999px;background:#1b2742;border:1px solid rgba(255,255,255,.12);color:#cfe0ff}
+    .total{display:flex;align-items:center;justify-content:space-between;padding:10px 0;font-weight:800;font-size:20px}
+
+    .footerbar{position:fixed;inset:auto 0 0 0;background:linear-gradient(180deg,rgba(11,18,32,0),#0e1526 40%,#0b1220);padding:12px 16px}
+    .footerbar .inner{max-width:1100px;margin:0 auto;display:flex;gap:10px}
+    .footerbar .inner .btn{flex:1}
+
+    .pill{display:inline-flex;align-items:center;gap:8px;background:#0f1a30;border:1px solid rgba(255,255,255,.15);border-radius:999px;padding:10px 12px}
+    .pill .dot{width:8px;height:8px;border-radius:999px}
+
+    .muted{color:#9aacc6}
+    .small{font-size:12px}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+
+    .divider{height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);margin:8px 0}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>FCR Kiosk Kasse</h1>
+      <span class="badge" id="statusBadge">Kein Tag geöffnet</span>
+    </header>
+
+    <div class="grid cols">
+      <!-- Linke Spalte: Artikel-Buttons -->
+      <section class="card">
+        <div class="content">
+          <h2>Tag eröffnen</h2>
+          <div class="toolbar" style="margin-bottom:10px">
+            <input type="date" id="dayInput" />
+            <button class="btn primary" id="openDayBtn">Tag eröffnen</button>
+            <button class="btn muted" id="closeDayBtn" disabled>Tag schliessen (ohne Reset)</button>
+            <span class="pill small" id="salesCountPill" title="Anzahl Verkäufe heute">
+              <span class="dot" style="background:#22c55e"></span><span id="salesCount">0</span> Verkäufe
+            </span>
+          </div>
+
+          <div class="divider"></div>
+
+          <h2>Artikel</h2>
+          <div class="items" id="items"></div>
+        </div>
+      </section>
+
+      <!-- Rechte Spalte: Warenkorb + Tagesliste -->
+      <section class="card">
+        <div class="content">
+          <h2>Aktueller Bon</h2>
+          <ul class="cart-list" id="cart"></ul>
+          <div class="total"><span>Total</span><span id="cartTotal" class="mono">CHF 0.00</span></div>
+          <div class="toolbar">
+            <button class="btn ok" id="payBtn" disabled>Bezahlt</button>
+            <button class="btn warn" id="undoBtn" disabled>Letzte Position zurück</button>
+            <button class="btn ghost" id="clearCartBtn" disabled>Bon leeren</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" style="grid-column:1/-1">
+        <div class="content">
+          <h2>Tagesliste</h2>
+          <ul class="sales-list" id="sales"></ul>
+          <div class="divider"></div>
+          <div class="toolbar">
+            <button class="btn muted" id="summaryBtn" disabled>Zusammenfassung anzeigen</button>
+            <button class="btn" id="exportBtn" disabled>Als CSV exportieren</button>
+            <button class="btn ghost" id="resetDayBtn" disabled>Tag zurücksetzen (nach Export)</button>
+          </div>
+          <p class="small muted" style="margin-top:8px">Tipp: CSV lässt sich in Excel öffnen. Jede Zeile = Einzelposition mit Zeitstempel & Bon-ID.</p>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div class="footerbar">
+    <div class="inner">
+      <button class="btn ok" id="quickPayBtn" disabled>Bezahlt (Schnell)</button>
+      <button class="btn primary" id="openTodayBtn">Heute öffnen</button>
+    </div>
+  </div>
+
+<script>
+/*********************************
+ * KONFIGURATION: ARTIKEL & PREISE
+ *********************************/
+const CATALOG = [
+  { name:'Bier Gross',   price: 5.50 },
+  { name:'Bier Klein',   price: 3.50 },
+  { name:'Café',         price: 4.00 },
+  { name:'Pommes',       price: 6.00 },
+  { name:'Burger',       price:11.00 },
+  { name:'Cheeseburger', price:12.00 },
+  // ➜ Hier kannst du jederzeit erweitern (Name/Preis)
+];
+
+const CHF = new Intl.NumberFormat('de-CH',{style:'currency',currency:'CHF'});
+
+/*********************
+ * STORAGE (localStorage)
+ *********************/
+function keyForDay(day){ return `fcrkiosk:${day}`; }
+function loadDay(day){
+  const raw = localStorage.getItem(keyForDay(day));
+  return raw ? JSON.parse(raw) : { meta:{ openedAt:new Date().toISOString() }, sales:[] };
+}
+function saveDay(day, data){ localStorage.setItem(keyForDay(day), JSON.stringify(data)); }
+function clearDay(day){ localStorage.removeItem(keyForDay(day)); }
+
+/*********************
+ * APP STATE
+ *********************/
+let currentDay = null; // string YYYY-MM-DD
+let dayData = null;    // {meta, sales}
+let cart = [];         // [{name, price, qty}]
+
+/*********************
+ * UI HELPERS
+ *********************/
+function setBadge(text){ document.getElementById('statusBadge').textContent = text; }
+function setButtonsEnabled(isOpen){
+  document.getElementById('closeDayBtn').disabled = !isOpen;
+  document.getElementById('payBtn').disabled = !isOpen || cart.length===0;
+  document.getElementById('undoBtn').disabled = !isOpen || cart.length===0;
+  document.getElementById('clearCartBtn').disabled = !isOpen || cart.length===0;
+  document.getElementById('exportBtn').disabled = !isOpen || (dayData?.sales?.length||0)===0;
+  document.getElementById('resetDayBtn').disabled = !isOpen || (dayData?.sales?.length||0)===0;
+  document.getElementById('summaryBtn').disabled = !isOpen || (dayData?.sales?.length||0)===0;
+  document.getElementById('quickPayBtn').disabled = !isOpen || cart.length===0;
+}
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+
+/*********************
+ * RENDER: Artikel-Buttons
+ *********************/
+function renderItems(){
+  const wrap = document.getElementById('items');
+  wrap.innerHTML = '';
+  CATALOG.forEach((item, idx)=>{
+    const el = document.createElement('div');
+    el.className = 'item';
+    el.innerHTML = `
+      <div class="name">${item.name}</div>
+      <div class="price">${CHF.format(item.price)}</div>
+      <div class="toolbar"><button class="btn muted add">Hinzufügen</button>
+        <button class="btn ghost smallAdd">+2</button>
+        <button class="btn ghost smallAdd3">+3</button>
+      </div>`;
+    el.querySelector('.add').onclick = ()=> addToCart(item, 1);
+    el.querySelector('.smallAdd').onclick = ()=> addToCart(item, 2);
+    el.querySelector('.smallAdd3').onclick = ()=> addToCart(item, 3);
+    wrap.appendChild(el);
+  });
+}
+
+/*********************
+ * CART
+ *********************/
+function addToCart(item, qty=1){
+  const idx = cart.findIndex(x=>x.name===item.name && x.price===item.price);
+  if(idx>=0){ cart[idx].qty += qty; }
+  else { cart.push({name:item.name, price:item.price, qty}); }
+  renderCart();
+}
+function undoLast(){ cart.pop(); renderCart(); }
+function clearCart(){ cart = []; renderCart(); }
+function cartTotal(){ return cart.reduce((s,x)=> s + x.price*x.qty, 0); }
+function renderCart(){
+  const list = document.getElementById('cart');
+  list.innerHTML = '';
+  cart.forEach((x,i)=>{
+    const li = document.createElement('li');
+    li.className='row';
+    li.innerHTML = `
+      <div class="left">
+        <span class="chip">${x.qty}×</span>
+        <div>
+          <div>${x.name}</div>
+          <div class="small muted">à ${CHF.format(x.price)}</div>
+        </div>
+      </div>
+      <div class="mono">${CHF.format(x.price*x.qty)}</div>`;
+    list.appendChild(li);
+  });
+  document.getElementById('cartTotal').textContent = CHF.format(cartTotal());
+  document.getElementById('salesCount').textContent = String(dayData?.sales?.length||0);
+  setButtonsEnabled(!!currentDay);
+}
+
+/*********************
+ * SALES (Tagesliste)
+ *********************/
+function newBonId(){
+  // YYYYMMDD-HHMMSS-rrrr
+  const d = new Date();
+  const pad = n=> String(n).padStart(2,'0');
+  const id = `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}-${Math.floor(Math.random()*9000+1000)}`;
+  return id;
+}
+function pay(){
+  if(!currentDay || cart.length===0) return;
+  const id = newBonId();
+  const ts = new Date().toISOString();
+  const lines = cart.map(x=>({ id, ts, item:x.name, qty:x.qty, price:x.price, total: +(x.price*x.qty).toFixed(2) }));
+  dayData.sales.push(...lines);
+  saveDay(currentDay, dayData);
+  appendSales(lines);
+  clearCart();
+}
+function appendSales(lines){
+  const list = document.getElementById('sales');
+  const time = (s)=> new Date(s).toLocaleTimeString('de-CH',{hour:'2-digit',minute:'2-digit'});
+  const groupTotal = lines.reduce((s,x)=> s+x.total, 0);
+  const container = document.createElement('li');
+  container.innerHTML = `
+    <div class="row"><div class="left"><span class="chip">Bon</span><strong>${lines[0].id}</strong></div><div class="mono">${CHF.format(groupTotal)}</div></div>`;
+  lines.forEach(x=>{
+    const li = document.createElement('div');
+    li.className='row';
+    li.innerHTML = `<div class="left"><span class="chip">${time(x.ts)}</span>${x.qty}× ${x.item}</div><div class="mono">${CHF.format(x.total)}</div>`;
+    container.appendChild(li);
+  });
+  list.prepend(container);
+  document.getElementById('salesCount').textContent = String(dayData?.sales?.length||0);
+  setButtonsEnabled(!!currentDay);
+}
+function renderAllSales(){
+  const byBon = new Map();
+  for(const line of (dayData?.sales||[])){
+    if(!byBon.has(line.id)) byBon.set(line.id, []);
+    byBon.get(line.id).push(line);
+  }
+  const arr = Array.from(byBon.values()).sort((a,b)=> b[0].ts.localeCompare(a[0].ts));
+  const list = document.getElementById('sales');
+  list.innerHTML = '';
+  arr.forEach(lines=> appendSales(lines));
+}
+
+/*********************
+ * EXPORT & SUMMARY
+ *********************/
+function toCSV(rows){
+  const esc = (v)=> '"'+String(v).replaceAll('"','""')+'"';
+  const header = ['Datum','Zeit','BonID','Artikel','Menge','Preis','Total'];
+  const body = rows.map(r=>{
+    const d = new Date(r.ts);
+    const datum = d.toLocaleDateString('de-CH');
+    const zeit  = d.toLocaleTimeString('de-CH',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    return [datum,zeit,r.id,r.item,r.qty,(r.price).toFixed(2),r.total.toFixed(2)].map(esc).join(',');
+  });
+  return [header.join(','), ...body].join('\n');
+}
+function exportCSV(){
+  if(!currentDay) return;
+  const rows = dayData.sales;
+  const csv = toCSV(rows);
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `FCR_Kasse_${currentDay}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+function showSummary(){
+  const sum = {};
+  let grand=0;
+  for(const r of dayData.sales){
+    sum[r.item] = (sum[r.item]||0) + r.total;
+    grand += r.total;
+  }
+  const lines = Object.entries(sum).sort((a,b)=> b[1]-a[1]).map(([k,v])=> `${k}: ${CHF.format(v)}`).join('\n');
+  alert((lines||'Keine Verkäufe')+"\n\nTotal: "+CHF.format(grand));
+}
+
+/*********************
+ * DAY OPEN/CLOSE/RESET
+ *********************/
+function openDay(day){
+  currentDay = day;
+  dayData = loadDay(day);
+  setBadge(`Tag geöffnet: ${day}`);
+  document.getElementById('closeDayBtn').disabled = false;
+  document.getElementById('exportBtn').disabled = (dayData.sales.length===0);
+  document.getElementById('resetDayBtn').disabled = (dayData.sales.length===0);
+  document.getElementById('summaryBtn').disabled = (dayData.sales.length===0);
+  renderAllSales();
+  renderCart();
+}
+function closeDay(){
+  currentDay = null;
+  setBadge('Kein Tag geöffnet');
+  setButtonsEnabled(false);
+}
+function resetDay(){
+  if(!currentDay) return;
+  if(!confirm('Willst du den Tag wirklich löschen? (alle Verkäufe werden entfernt)')) return;
+  clearDay(currentDay);
+  dayData = { meta:{ openedAt:new Date().toISOString() }, sales:[] };
+  saveDay(currentDay, dayData);
+  renderAllSales();
+  renderCart();
+}
+
+/*********************
+ * INIT
+ *********************/
+function init(){
+  // Heute als Default im Datepicker
+  document.getElementById('dayInput').value = todayStr();
+  renderItems();
+  renderCart();
+
+  document.getElementById('openDayBtn').onclick = ()=>{
+    const v = document.getElementById('dayInput').value || todayStr();
+    openDay(v);
+  };
+  document.getElementById('openTodayBtn').onclick = ()=> openDay(todayStr());
+  document.getElementById('closeDayBtn').onclick = ()=> closeDay();
+  document.getElementById('resetDayBtn').onclick = ()=> resetDay();
+
+  document.getElementById('payBtn').onclick = ()=> pay();
+  document.getElementById('quickPayBtn').onclick = ()=> pay();
+  document.getElementById('undoBtn').onclick = ()=> undoLast();
+  document.getElementById('clearCartBtn').onclick = ()=> clearCart();
+
+  document.getElementById('exportBtn').onclick = ()=> exportCSV();
+  document.getElementById('summaryBtn').onclick = ()=> showSummary();
+}
+
+init();
+</script>
+</body>
+</html>
