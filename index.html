@@ -12,13 +12,13 @@
     *{box-sizing:border-box}
     html,body{height:100%}
     body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;background:linear-gradient(180deg,#0b1220,#0e1526 60%,#0b1220);color:var(--text)}
-    .wrap{max-width:1100px;margin-inline:auto;padding:16px;padding-bottom:120px}
+    .wrap{max-width:1500px;margin-inline:auto;padding:16px 12px 120px}
     header{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:16px}
     h1{font-size:22px;margin:0;letter-spacing:.3px}
     .badge{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);padding:6px 10px;border-radius:999px;font-size:12px}
     .grid{display:grid;gap:12px}
     .cols{grid-template-columns:1fr}
-    @media(min-width:920px){.cols{grid-template-columns:1.1fr .9fr}}
+    @media(min-width:980px){.cols{grid-template-columns:1.6fr .4fr}}
 
     .card{background:var(--card);border:1px solid rgba(255,255,255,.1);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
     .card h2{font-size:16px;margin:0 0 8px 0}
@@ -35,9 +35,9 @@
     .btn.warn{background:linear-gradient(180deg,#f59e0b,#d97706)}
     .btn.muted{background:#1b2338;color:#c9d4e5;border:1px solid rgba(255,255,255,.12)}
 
-    .items{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
-    @media(min-width:560px){.items{grid-template-columns:repeat(3,1fr)}}
-    @media(min-width:920px){.items{grid-template-columns:repeat(4,1fr)}}
+    .items{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+    @media(min-width:560px){.items{grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}}
+    @media(min-width:1200px){.items{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}}
     .item{background:#111a2e;border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:6px}
     .item .name{font-weight:700}
     .item .price{font-size:14px;color:#cdd6e6}
@@ -49,10 +49,6 @@
     .row .left{display:flex;align-items:center;gap:8px}
     .chip{font-size:12px;padding:2px 8px;border-radius:999px;background:#1b2742;border:1px solid rgba(255,255,255,.12);color:#cfe0ff}
     .total{display:flex;align-items:center;justify-content:space-between;padding:10px 0;font-weight:800;font-size:20px}
-
-    .footerbar{position:fixed;inset:auto 0 0 0;background:linear-gradient(180deg,rgba(11,18,32,0),#0e1526 40%,#0b1220);padding:12px 16px}
-    .footerbar .inner{max-width:1100px;margin:0 auto;display:flex;gap:10px}
-    .footerbar .inner .btn{flex:1}
 
     .pill{display:inline-flex;align-items:center;gap:8px;background:#0f1a30;border:1px solid rgba(255,255,255,.15);border-radius:999px;padding:10px 12px}
     .pill .dot{width:8px;height:8px;border-radius:999px}
@@ -121,13 +117,6 @@
     </div>
   </div>
 
-  <div class="footerbar">
-    <div class="inner">
-      <button class="btn ok" id="quickPayBtn" disabled>Bezahlt (Schnell)</button>
-      <button class="btn primary" id="openTodayBtn">Heute öffnen</button>
-    </div>
-  </div>
-
 <script>
 /*********************************
  * KONFIGURATION: ARTIKEL & PREISE
@@ -140,6 +129,7 @@ const CATALOG = [
   { name:'Burger',       price:11.00 },
   { name:'Cheeseburger', price:12.00 },
   // ➜ Hier kannst du jederzeit erweitern (Name/Preis)
+  // Beispiel: { name:'Mineral', price:3.50 }, { name:'Coca Cola', price:4.00 }, ...
 ];
 
 const CHF = new Intl.NumberFormat('de-CH',{style:'currency',currency:'CHF'});
@@ -150,7 +140,7 @@ const CHF = new Intl.NumberFormat('de-CH',{style:'currency',currency:'CHF'});
  * 2) Extensions → Apps Script: folgenden Code einsetzen und als Web-App deployen (siehe Chat-Anleitung).
  * 3) URL hier eintragen:
  *********************************/
-const WEBHOOK_URL = "https://script.google.com/a/macros/fcrheineck.ch/s/AKfycbwZ9gIlrNrHOEVGFC7TmDZHFO3InykjdwJ31zeGtN3N6E0e71Gulaq8Tc8nZvF4p6mN/exec"; 
+const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbwZ9gIlrNrHOEVGFC7TmDZHFO3InykjdwJ31zeGtN3N6E0e71Gulaq8Tc8nZvF4p6mN/exec"
 
 /*********************
  * STORAGE (localStorage)
@@ -181,7 +171,6 @@ function setButtonsEnabled(isOpen){
   document.getElementById('exportBtn').disabled = !isOpen || (dayData?.sales?.length||0)===0;
   document.getElementById('resetDayBtn').disabled = !isOpen || (dayData?.sales?.length||0)===0;
   document.getElementById('summaryBtn').disabled = !isOpen || (dayData?.sales?.length||0)===0;
-  document.getElementById('quickPayBtn').disabled = !isOpen || cart.length===0;
 }
 function todayStr(){ return new Date().toISOString().slice(0,10); }
 
@@ -191,19 +180,14 @@ function todayStr(){ return new Date().toISOString().slice(0,10); }
 function renderItems(){
   const wrap = document.getElementById('items');
   wrap.innerHTML = '';
-  CATALOG.forEach((item, idx)=>{
+  CATALOG.forEach((item)=>{
     const el = document.createElement('div');
     el.className = 'item';
     el.innerHTML = `
       <div class="name">${item.name}</div>
       <div class="price">${CHF.format(item.price)}</div>
-      <div class="toolbar"><button class="btn muted add">Hinzufügen</button>
-        <button class="btn ghost smallAdd">+2</button>
-        <button class="btn ghost smallAdd3">+3</button>
-      </div>`;
+      <div class="toolbar"><button class="btn muted add" style="width:100%">Hinzufügen</button></div>`;
     el.querySelector('.add').onclick = ()=> addToCart(item, 1);
-    el.querySelector('.smallAdd').onclick = ()=> addToCart(item, 2);
-    el.querySelector('.smallAdd3').onclick = ()=> addToCart(item, 3);
     wrap.appendChild(el);
   });
 }
@@ -223,7 +207,7 @@ function cartTotal(){ return cart.reduce((s,x)=> s + x.price*x.qty, 0); }
 function renderCart(){
   const list = document.getElementById('cart');
   list.innerHTML = '';
-  cart.forEach((x,i)=>{
+  cart.forEach((x)=>{
     const li = document.createElement('li');
     li.className='row';
     li.innerHTML = `
@@ -346,10 +330,8 @@ function init(){
     const v = document.getElementById('dayInput').value || todayStr();
     openDay(v);
   };
-  document.getElementById('openTodayBtn').onclick = ()=> openDay(todayStr());
 
   document.getElementById('payBtn').onclick = ()=> pay();
-  document.getElementById('quickPayBtn').onclick = ()=> pay();
   document.getElementById('undoBtn').onclick = ()=> undoLast();
   document.getElementById('clearCartBtn').onclick = ()=> clearCart();
 
