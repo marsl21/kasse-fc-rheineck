@@ -6,12 +6,17 @@
   <title>FCR Kiosk Kasse</title>
   <style>
     :root{
-      --bg:#0b1220; --card:#121a2b; --muted:#7a8aa0; --text:#e8eef8; --accent:#e53935; --ok:#23c55e;
+      --bg:#0b1220;
+      --card:#121a2b;
+      --tile:#1a2746;          /* helleres Blau für Artikel-Kacheln */
+      --tile-hover:#22335a;    /* Hover/Fokus */
+      --tile-active:#2a3f71;   /* Active */
+      --muted:#9ab0cf; --text:#ffffff; --accent:#e53935; --ok:#23c55e;
       --brand:#c21c2c; /* FCR Rot Touch */
     }
     *{box-sizing:border-box}
     html,body{height:100%}
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;background:linear-gradient(180deg,#0b1220,#0e1526 60%,#0b1220);color:var(--text)}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;background:linear-gradient(180deg,var(--bg),#0e1526 60%,var(--bg));color:var(--text)}
     .wrap{max-width:1500px;margin-inline:auto;padding:16px 12px 120px}
     header{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:16px}
     h1{font-size:22px;margin:0;letter-spacing:.3px}
@@ -31,17 +36,22 @@
     .btn[disabled]{opacity:.5;pointer-events:none}
     .btn.primary{background:linear-gradient(180deg,#e63b3b,#b91c1c)}
     .btn.ok{background:linear-gradient(180deg,#22c55e,#16a34a)}
-    .btn.ghost{background:transparent;border:1px dashed rgba(255,255,255,.25);color:var(--muted)}
+    .btn.ghost{background:transparent;border:1px dashed rgba(255,255,255,.25);color:#7a8aa0}
     .btn.warn{background:linear-gradient(180deg,#f59e0b,#d97706)}
     .btn.muted{background:#1b2338;color:#c9d4e5;border:1px solid rgba(255,255,255,.12)}
 
-    .items{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
-    @media(min-width:560px){.items{grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}}
-    @media(min-width:1200px){.items{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}}
-    .item{background:#111a2e;border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:6px}
-    .item .name{font-weight:700}
+    .group{margin-bottom:12px}
+    .group-title{margin:8px 4px 8px;font-weight:800;letter-spacing:.3px;color:#dbe7ff;opacity:.9}
+    .items{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+    @media(min-width:560px){.items{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}}
+    @media(min-width:1200px){.items{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}}
+
+    .item{background:var(--tile);border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:16px 14px;display:flex;flex-direction:column;gap:6px;cursor:pointer;user-select:none;outline:none}
+    .item:hover{background:var(--tile-hover)}
+    .item:active{background:var(--tile-active)}
+    .item:focus-visible{box-shadow:0 0 0 3px rgba(255,255,255,.18)}
+    .item .name{font-weight:900;letter-spacing:.2px;font-size:18px;color:#ffffff}
     .item .price{font-size:14px;color:#cdd6e6}
-    .item .add{margin-top:auto}
 
     .cart-list,.sales-list{list-style:none;margin:0;padding:0}
     .row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px dashed rgba(255,255,255,.08)}
@@ -83,7 +93,7 @@
           <div class="divider"></div>
 
           <h2>Artikel</h2>
-          <div class="items" id="items"></div>
+          <div id="catalog"></div>
         </div>
       </section>
 
@@ -111,7 +121,7 @@
             <button class="btn" id="exportBtn" disabled>Zu Google Sheets speichern</button>
             <button class="btn ghost" id="resetDayBtn" disabled>Tag zurücksetzen</button>
           </div>
-          <p class="small muted" style="margin-top:8px">Hinweis: Speichern zu Google Sheets erfordert die Einrichtung eines Webhooks (siehe Kommentar im Code). "Tag zurücksetzen" löscht lokale Tagesdaten. <strong>Achtung: erst nach Abschluss zurücksetzen!</strong></p>
+          <p class="small muted" style="margin-top:8px">Hinweis: Speichern zu Google Sheets erfordert die Einrichtung eines Webhooks. "Tag zurücksetzen" löscht lokale Tagesdaten. <strong>Achtung: erst nach Abschluss zurücksetzen!</strong></p>
         </div>
       </section>
     </div>
@@ -119,31 +129,36 @@
 
 <script>
 /*********************************
- * KONFIGURATION: ARTIKEL & PREISE
+ * KONFIGURATION: ARTIKEL & PREISE (mit Gruppen)
  *********************************/
-const CATALOG = [
-  { name:'Mineral klein',	 price: 3.00 },
-  { name:'Mineral GROSS',	 price: 4.50 },
-  { name:'Bier klein',   price: 3.50 },
-  { name:'Bier GROSS',   price: 5.50 },
-  { name:'Café',         price: 4.00 },
-  { name:'Pommes',       price: 6.00 },
-  { name:'Schnitzelbrot', price: 8.00 },
-  { name:'Hamburger',       price:11.00 },
-  { name:'Cheeseburger', price:12.00 },
-  // ➜ Hier kannst du jederzeit erweitern (Name/Preis)
-  // Beispiel: { name:'Mineral', price:3.50 }, { name:'Coca Cola', price:4.00 }, ...
-];
+const CATALOG = {
+  'Getränke': [
+    { name:'Mineral klein',  price: 3.00 },
+    { name:'Mineral GROSS',  price: 4.50 },
+    { name:'Bier klein',     price: 3.50 },
+    { name:'Bier GROSS',     price: 5.50 },
+    { name:'Café',           price: 4.00 },
+  ],
+  'Essen': [
+    { name:'Hamburger',      price:11.00 },
+    { name:'Cheeseburger',   price:12.00 },
+    { name:'Schnitzelbrot',  price: 8.00 },
+    { name:'Pommes',         price: 6.00 },
+  ],
+  'Snacks': [
+   { name:'Snickers',         price: 1.50 },
+   { name:'Chips',         price: 1.50 },
+   { name:'Süssigkeiten',     price: 1.00 },
+   { name:'Glacé',     price: 3.00 },
+  ]
+};
 
 const CHF = new Intl.NumberFormat('de-CH',{style:'currency',currency:'CHF'});
 
 /*********************************
  * GOOGLE SHEETS WEBHOOK (Apps Script)
- * 1) Erstelle ein Google Sheet (z.B. "FCR Kasse Tagesliste").
- * 2) Extensions → Apps Script: folgenden Code einsetzen und als Web-App deployen (siehe Chat-Anleitung).
- * 3) URL hier eintragen:
  *********************************/
-const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbx4-301v8V-8V3tulg-UIou1R6J2MDb-IzMplFbArkdy6Df54Hk631UwhBOgBVj6KOO/exec"
+const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbx4-301v8V-8V3tulg-UIou1R6J2MDb-IzMplFbArkdy6Df54Hk631UwhBOgBVj6KOO/exec"; // deine /macros/s/.../exec URL
 
 /*********************
  * STORAGE (localStorage)
@@ -178,21 +193,34 @@ function setButtonsEnabled(isOpen){
 function todayStr(){ return new Date().toISOString().slice(0,10); }
 
 /*********************
- * RENDER: Artikel-Buttons
+ * RENDER: Artikel-Gruppen & Kacheln
  *********************/
 function renderItems(){
-  const wrap = document.getElementById('items');
-  wrap.innerHTML = '';
-  CATALOG.forEach((item)=>{
-    const el = document.createElement('div');
-    el.className = 'item';
-    el.innerHTML = `
-      <div class="name">${item.name}</div>
-      <div class="price">${CHF.format(item.price)}</div>
-      <div class="toolbar"><button class="btn muted add" style="width:100%">Hinzufügen</button></div>`;
-    el.querySelector('.add').onclick = ()=> addToCart(item, 1);
-    wrap.appendChild(el);
-  });
+  const root = document.getElementById('catalog');
+  root.innerHTML = '';
+  for(const [group, items] of Object.entries(CATALOG)){
+    const section = document.createElement('section');
+    section.className = 'group';
+    const title = document.createElement('div');
+    title.className = 'group-title';
+    title.textContent = group;
+    const grid = document.createElement('div');
+    grid.className = 'items';
+
+    items.forEach(item=>{
+      const btn = document.createElement('button');
+      btn.className = 'item';
+      btn.type = 'button';
+      btn.setAttribute('aria-label', `${item.name} hinzufügen`);
+      btn.innerHTML = `<div class="name">${item.name}</div><div class="price">${CHF.format(item.price)}</div>`;
+      btn.onclick = ()=> addToCart(item, 1);
+      grid.appendChild(btn);
+    });
+
+    section.appendChild(title);
+    section.appendChild(grid);
+    root.appendChild(section);
+  }
 }
 
 /*********************
@@ -233,7 +261,6 @@ function renderCart(){
  * SALES (Tagesliste)
  *********************/
 function newBonId(){
-  // YYYYMMDD-HHMMSS-rrrr
   const d = new Date();
   const pad = n=> String(n).padStart(2,'0');
   const id = `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}-${Math.floor(Math.random()*9000+1000)}`;
@@ -279,7 +306,7 @@ function renderAllSales(){
 }
 
 /*********************
- * EXPORT → GOOGLE SHEETS
+ * EXPORT → GOOGLE SHEETS (ohne Preflight)
  *********************/
 async function exportToSheets(){
   if(!currentDay) return;
@@ -287,7 +314,9 @@ async function exportToSheets(){
   const payload = { day: currentDay, sales: dayData.sales };
   try{
     const res = await fetch(WEBHOOK_URL, {
-      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
+      method:'POST',
+      headers:{ 'Content-Type':'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
     });
     if(!res.ok){ throw new Error('HTTP '+res.status); }
     const json = await res.json().catch(()=>({}));
@@ -321,10 +350,23 @@ function resetDay(){
 }
 
 /*********************
+ * SUMMARY (Anzeige)
+ *********************/
+function showSummary(){
+  const sum = {};
+  let grand=0;
+  for(const r of dayData.sales){
+    sum[r.item] = (sum[r.item]||0) + r.total;
+    grand += r.total;
+  }
+  const lines = Object.entries(sum).sort((a,b)=> b[1]-a[1]).map(([k,v])=> `${k}: ${CHF.format(v)}`).join('\n');
+  alert((lines||'Keine Verkäufe')+"\n\nTotal: "+CHF.format(grand));
+}
+
+/*********************
  * INIT
  *********************/
 function init(){
-  // Heute als Default im Datepicker
   document.getElementById('dayInput').value = todayStr();
   renderItems();
   renderCart();
@@ -341,20 +383,6 @@ function init(){
   document.getElementById('exportBtn').onclick = ()=> exportToSheets();
   document.getElementById('summaryBtn').onclick = ()=> showSummary();
   document.getElementById('resetDayBtn').onclick = ()=> resetDay();
-}
-
-/*********************
- * SUMMARY (Anzeige)
- *********************/
-function showSummary(){
-  const sum = {};
-  let grand=0;
-  for(const r of dayData.sales){
-    sum[r.item] = (sum[r.item]||0) + r.total;
-    grand += r.total;
-  }
-  const lines = Object.entries(sum).sort((a,b)=> b[1]-a[1]).map(([k,v])=> `${k}: ${CHF.format(v)}`).join('\n');
-  alert((lines||'Keine Verkäufe')+"\n\nTotal: "+CHF.format(grand));
 }
 
 init();
