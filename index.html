@@ -79,7 +79,6 @@
           <div class="toolbar" style="margin-bottom:10px">
             <input type="date" id="dayInput" />
             <button class="btn primary" id="openDayBtn">Tag eröffnen</button>
-            <button class="btn muted" id="closeDayBtn" disabled>Tag schliessen (ohne Reset)</button>
             <span class="pill small" id="salesCountPill" title="Anzahl Verkäufe heute">
               <span class="dot" style="background:#22c55e"></span><span id="salesCount">0</span> Verkäufe
             </span>
@@ -113,10 +112,10 @@
           <div class="divider"></div>
           <div class="toolbar">
             <button class="btn muted" id="summaryBtn" disabled>Zusammenfassung anzeigen</button>
-            <button class="btn" id="exportBtn" disabled>Als CSV exportieren</button>
-            <button class="btn ghost" id="resetDayBtn" disabled>Tag zurücksetzen (nach Export)</button>
+            <button class="btn" id="exportBtn" disabled>Zu Google Sheets speichern</button>
+            <button class="btn ghost" id="resetDayBtn" disabled>Tag zurücksetzen</button>
           </div>
-          <p class="small muted" style="margin-top:8px">Tipp: CSV lässt sich in Excel öffnen. Jede Zeile = Einzelposition mit Zeitstempel & Bon-ID.</p>
+          <p class="small muted" style="margin-top:8px">Hinweis: Speichern zu Google Sheets erfordert die Einrichtung eines Webhooks (siehe Kommentar im Code). "Tag zurücksetzen" löscht lokale Tagesdaten. <strong>Achtung: erst nach Abschluss zurücksetzen!</strong></p>
         </div>
       </section>
     </div>
@@ -145,6 +144,14 @@ const CATALOG = [
 
 const CHF = new Intl.NumberFormat('de-CH',{style:'currency',currency:'CHF'});
 
+/*********************************
+ * GOOGLE SHEETS WEBHOOK (Apps Script)
+ * 1) Erstelle ein Google Sheet (z.B. "FCR Kasse Tagesliste").
+ * 2) Extensions → Apps Script: folgenden Code einsetzen und als Web-App deployen (siehe Chat-Anleitung).
+ * 3) URL hier eintragen:
+ *********************************/
+const WEBHOOK_URL = "https://script.google.com/a/macros/fcrheineck.ch/s/AKfycbwZ9gIlrNrHOEVGFC7TmDZHFO3InykjdwJ31zeGtN3N6E0e71Gulaq8Tc8nZvF4p6mN/exec"; 
+
 /*********************
  * STORAGE (localStorage)
  *********************/
@@ -168,7 +175,6 @@ let cart = [];         // [{name, price, qty}]
  *********************/
 function setBadge(text){ document.getElementById('statusBadge').textContent = text; }
 function setButtonsEnabled(isOpen){
-  document.getElementById('closeDayBtn').disabled = !isOpen;
   document.getElementById('payBtn').disabled = !isOpen || cart.length===0;
   document.getElementById('undoBtn').disabled = !isOpen || cart.length===0;
   document.getElementById('clearCartBtn').disabled = !isOpen || cart.length===0;
@@ -286,63 +292,40 @@ function renderAllSales(){
 }
 
 /*********************
- * EXPORT & SUMMARY
+ * EXPORT → GOOGLE SHEETS
  *********************/
-function toCSV(rows){
-  const esc = (v)=> '"'+String(v).replaceAll('"','""')+'"';
-  const header = ['Datum','Zeit','BonID','Artikel','Menge','Preis','Total'];
-  const body = rows.map(r=>{
-    const d = new Date(r.ts);
-    const datum = d.toLocaleDateString('de-CH');
-    const zeit  = d.toLocaleTimeString('de-CH',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-    return [datum,zeit,r.id,r.item,r.qty,(r.price).toFixed(2),r.total.toFixed(2)].map(esc).join(',');
-  });
-  return [header.join(','), ...body].join('\n');
-}
-function exportCSV(){
+async function exportToSheets(){
   if(!currentDay) return;
-  const rows = dayData.sales;
-  const csv = toCSV(rows);
-  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `FCR_Kasse_${currentDay}.csv`;
-  document.body.appendChild(a); a.click(); a.remove();
-}
-
-function showSummary(){
-  const sum = {};
-  let grand=0;
-  for(const r of dayData.sales){
-    sum[r.item] = (sum[r.item]||0) + r.total;
-    grand += r.total;
+  if(!WEBHOOK_URL){ alert('Kein Google-Webhook konfiguriert. Bitte WEBHOOK_URL im Code setzen.'); return; }
+  const payload = { day: currentDay, sales: dayData.sales };
+  try{
+    const res = await fetch(WEBHOOK_URL, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
+    });
+    if(!res.ok){ throw new Error('HTTP '+res.status); }
+    const json = await res.json().catch(()=>({}));
+    alert('Zu Google Sheets gespeichert. '+ (json.inserted? (json.inserted+ ' Zeilen eingefügt.') : ''));
+  }catch(err){
+    alert('Fehler beim Speichern zu Google Sheets: '+err.message+'\nBitte prüfe die Web-App-URL und Berechtigungen.');
   }
-  const lines = Object.entries(sum).sort((a,b)=> b[1]-a[1]).map(([k,v])=> `${k}: ${CHF.format(v)}`).join('\n');
-  alert((lines||'Keine Verkäufe')+"\n\nTotal: "+CHF.format(grand));
 }
 
 /*********************
- * DAY OPEN/CLOSE/RESET
+ * DAY OPEN/RESET
  *********************/
 function openDay(day){
   currentDay = day;
   dayData = loadDay(day);
   setBadge(`Tag geöffnet: ${day}`);
-  document.getElementById('closeDayBtn').disabled = false;
   document.getElementById('exportBtn').disabled = (dayData.sales.length===0);
   document.getElementById('resetDayBtn').disabled = (dayData.sales.length===0);
   document.getElementById('summaryBtn').disabled = (dayData.sales.length===0);
   renderAllSales();
   renderCart();
 }
-function closeDay(){
-  currentDay = null;
-  setBadge('Kein Tag geöffnet');
-  setButtonsEnabled(false);
-}
 function resetDay(){
   if(!currentDay) return;
-  if(!confirm('Willst du den Tag wirklich löschen? (alle Verkäufe werden entfernt)')) return;
+  if(!confirm('Achtung: erst nach Abschluss zurücksetzen!\nWillst du den Tag wirklich löschen? (alle Verkäufe werden entfernt)')) return;
   clearDay(currentDay);
   dayData = { meta:{ openedAt:new Date().toISOString() }, sales:[] };
   saveDay(currentDay, dayData);
@@ -364,16 +347,29 @@ function init(){
     openDay(v);
   };
   document.getElementById('openTodayBtn').onclick = ()=> openDay(todayStr());
-  document.getElementById('closeDayBtn').onclick = ()=> closeDay();
-  document.getElementById('resetDayBtn').onclick = ()=> resetDay();
 
   document.getElementById('payBtn').onclick = ()=> pay();
   document.getElementById('quickPayBtn').onclick = ()=> pay();
   document.getElementById('undoBtn').onclick = ()=> undoLast();
   document.getElementById('clearCartBtn').onclick = ()=> clearCart();
 
-  document.getElementById('exportBtn').onclick = ()=> exportCSV();
+  document.getElementById('exportBtn').onclick = ()=> exportToSheets();
   document.getElementById('summaryBtn').onclick = ()=> showSummary();
+  document.getElementById('resetDayBtn').onclick = ()=> resetDay();
+}
+
+/*********************
+ * SUMMARY (Anzeige)
+ *********************/
+function showSummary(){
+  const sum = {};
+  let grand=0;
+  for(const r of dayData.sales){
+    sum[r.item] = (sum[r.item]||0) + r.total;
+    grand += r.total;
+  }
+  const lines = Object.entries(sum).sort((a,b)=> b[1]-a[1]).map(([k,v])=> `${k}: ${CHF.format(v)}`).join('\n');
+  alert((lines||'Keine Verkäufe')+"\n\nTotal: "+CHF.format(grand));
 }
 
 init();
