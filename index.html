@@ -122,11 +122,14 @@
  * KONFIGURATION: ARTIKEL & PREISE
  *********************************/
 const CATALOG = [
-  { name:'Bier Gross',   price: 5.50 },
-  { name:'Bier Klein',   price: 3.50 },
+  { name:'Mineral klein',	 price: 3.00 },
+  { name:'Mineral GROSS',	 price: 4.50 },
+  { name:'Bier klein',   price: 3.50 },
+  { name:'Bier GROSS',   price: 5.50 },
   { name:'Café',         price: 4.00 },
   { name:'Pommes',       price: 6.00 },
-  { name:'Burger',       price:11.00 },
+  { name:'Schnitzelbrot', price: 8.00 },
+  { name:'Hamburger',       price:11.00 },
   { name:'Cheeseburger', price:12.00 },
   // ➜ Hier kannst du jederzeit erweitern (Name/Preis)
   // Beispiel: { name:'Mineral', price:3.50 }, { name:'Coca Cola', price:4.00 }, ...
@@ -140,7 +143,7 @@ const CHF = new Intl.NumberFormat('de-CH',{style:'currency',currency:'CHF'});
  * 2) Extensions → Apps Script: folgenden Code einsetzen und als Web-App deployen (siehe Chat-Anleitung).
  * 3) URL hier eintragen:
  *********************************/
-const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyZlC56dG6x17VsCkvlSfERllt3ooyK7zzf8CLCLSMND6BucIoBQgKsUf6KwzcY_B-E/exec"
+const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbx4-301v8V-8V3tulg-UIou1R6J2MDb-IzMplFbArkdy6Df54Hk631UwhBOgBVj6KOO/exec"
 
 /*********************
  * STORAGE (localStorage)
