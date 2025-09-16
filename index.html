@@ -16,6 +16,11 @@
       --tile-drinks:#233a70;       /* Getränke heller */
       --tile-drinks-hover:#2b4584;
       --tile-drinks-active:#36529b;
+     --tile-food:#6b1d1d;         /* Grundton (dunkles Rot) */
+     --tile-food-hover:#7f2525;   /* Hover */
+    --tile-food-active:#8f2d2d;  /* Active */
+
+
     }
     *{box-sizing:border-box}
     html,body{height:100%}
@@ -61,6 +66,12 @@
     .group[data-name="Getränke"] .item{background:var(--tile-drinks)}
     .group[data-name="Getränke"] .item:hover{background:var(--tile-drinks-hover)}
     .group[data-name="Getränke"] .item:active{background:var(--tile-drinks-active)}
+   
+    /* Gruppe Essen rot einfärben */
+    .group[data-name="Essen"] .item{background:var(--tile-food)}
+    .group[data-name="Essen"] .item:hover{background:var(--tile-food-hover)}
+    .group[data-name="Essen"] .item:active{background:var(--tile-food-active)}
+
 
     .cart-list,.sales-list{list-style:none;margin:0;padding:0}
     .row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px dashed rgba(255,255,255,.08)}
