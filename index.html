@@ -129,10 +129,10 @@
           <div class="divider"></div>
           <div class="toolbar">
             <button class="btn muted" id="summaryBtn" disabled>Zusammenfassung anzeigen</button>
-            <button class="btn danger" id="exportBtn" disabled>Zu Google Sheets speichern</button>
+            <button class="btn danger" id="exportBtn" disabled>Tagesabschluss</button>
             <button class="btn ghost" id="resetDayBtn" disabled>Tag zurücksetzen</button>
           </div>
-          <p class="small muted" style="margin-top:8px">Hinweis: Speichern zu Google Sheets erfordert die Einrichtung eines Webhooks. "Tag zurücksetzen" löscht lokale Tagesdaten. <strong>Achtung: erst nach Abschluss zurücksetzen!</strong></p>
+          <p class="small muted" style="margin-top:8px">Hinweis: "Tag zurücksetzen" löscht alle Tagesdaten von heute! <strong>Achtung: erst nach Tagesabschluss zurücksetzen!</strong></p>
         </div>
       </section>
     </div>
@@ -144,8 +144,8 @@
  *********************************/
 const CATALOG = {
   'Getränke': [
-    { name:'Softgetränk klein',  price: 3.00 },
-    { name:'Softgetränk GROSS',  price: 4.50 },
+    { name:'Getränk klein',  price: 3.00 },
+    { name:'Getränk GROSS',  price: 4.50 },
     { name:'Bier klein',     price: 3.50 },
     { name:'Bier GROSS',     price: 5.50 },
     { name:'Café',           price: 4.00 },
