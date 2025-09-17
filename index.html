@@ -88,8 +88,20 @@
     .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
 
     .divider{height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);margin:8px 0}
+
+
     /* Grosse Buttons rechts */
-    .btn.lg{font-size:16px;padding:16px 18px;border-radius:16px}
+.btn.lg{font-size:16px;padding:16px 18px;border-radius:16px}
+
+/* rechter Bereich etwas tiefer starten (Tablet/PC) */
+@media (min-width: 980px) {
+  .sidebar {
+    margin-top: 32px;
+    position: sticky;
+    top: 16px;  /* Abstand zum oberen Rand beim Scrollen */
+  }
+}
+
   </style>
 </head>
 <body>
@@ -119,7 +131,7 @@
       </section>
 
       <!-- Rechte Spalte: Warenkorb + Tagesliste -->
-      <section class="card">
+      <section class="card sidebar">
         <div class="content">
           <h2>Aktueller Bon</h2>
           <ul class="cart-list" id="cart"></ul>
