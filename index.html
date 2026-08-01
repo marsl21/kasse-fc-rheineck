@@ -31,7 +31,7 @@
     .badge{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);padding:6px 10px;border-radius:999px;font-size:12px}
     .grid{display:grid;gap:12px}
     .cols{grid-template-columns:1fr}
-    @media(min-width:980px){.cols{grid-template-columns:1.6fr .4fr}}
+    @media(min-width:980px){.cols{grid-template-columns:minmax(0,3fr) minmax(270px,1fr);align-items:start}}
 
     .card{background:var(--card);border:1px solid rgba(255,255,255,.1);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
     .card h2{font-size:16px;margin:0 0 8px 0}
@@ -51,16 +51,23 @@
 
     .group{margin-bottom:12px}
     .group-title{margin:8px 4px 8px;font-weight:800;letter-spacing:.3px;color:#dbe7ff;opacity:.9}
-    .items{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
-    @media(min-width:560px){.items{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}}
-    @media(min-width:1200px){.items{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}}
+    .items{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    @media(min-width:700px){.items{grid-template-columns:repeat(3,minmax(0,1fr))}}
+    /* Tablet im Querformat: vier gut bedienbare Artikelspalten */
+    @media(min-width:980px) and (max-width:1199px){.items{grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}}
+    /* Grössere Tablets im Querformat */
+    @media(min-width:1200px){.items{grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}}
 
-    .item{background:var(--tile);border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:16px 14px;display:flex;flex-direction:column;gap:6px;cursor:pointer;user-select:none;outline:none}
+    .item{background:var(--tile);border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:11px 12px;min-height:76px;display:flex;flex-direction:row;align-items:center;gap:10px;text-align:left;cursor:pointer;user-select:none;outline:none}
     .item:hover{background:var(--tile-hover)}
     .item:active{background:var(--tile-active)}
     .item:focus-visible{box-shadow:0 0 0 3px rgba(255,255,255,.18)}
-    .item .name{font-weight:900;letter-spacing:.2px;font-size:18px;color:#ffffff}
-    .item .price{font-size:14px;color:#cdd6e6}
+    .item-icon{width:40px;height:40px;flex:0 0 40px;display:grid;place-items:center;border-radius:11px;background:rgba(255,255,255,.10);color:#fff}
+    .item-icon svg{width:27px;height:27px;display:block;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+    .item-text{min-width:0;display:flex;flex-direction:column;gap:3px}
+    .item .name{font-weight:900;letter-spacing:.1px;font-size:16px;line-height:1.12;color:#ffffff;overflow-wrap:anywhere}
+    .item .price{font-size:13px;line-height:1.1;color:#cdd6e6}
+    @media(max-width:559px){.items{grid-template-columns:repeat(2,minmax(0,1fr))}.item{padding:9px 9px;gap:8px;min-height:72px}.item-icon{width:36px;height:36px;flex-basis:36px}.item-icon svg{width:24px;height:24px}.item .name{font-size:14px}.item .price{font-size:12px}}
 
     /* Gruppe Getränke heller einfärben */
     .group[data-name="Getränke"] .item{background:var(--tile-drinks)}
@@ -106,11 +113,26 @@
 
 /* rechter Bereich etwas tiefer starten (Tablet/PC) */
 @media (min-width: 980px) {
+  .wrap{padding-top:12px}
   .sidebar {
     margin-top: 32px;
     position: sticky;
-    top: 16px;  /* Abstand zum oberen Rand beim Scrollen */
+    top: 12px;
+    max-height:calc(100vh - 24px);
+    overflow:auto;
   }
+  .card .content{padding:12px}
+  .group{margin-bottom:10px}
+  .group-title{margin:6px 4px}
+  .item{min-height:72px;padding:9px 10px;gap:8px}
+  .item-icon{width:36px;height:36px;flex-basis:36px}
+  .item-icon svg{width:24px;height:24px}
+  .item .name{font-size:15px}
+}
+
+/* Da die Kasse ausschliesslich im Querformat verwendet wird */
+@media (orientation:portrait) and (min-width:700px){
+  body::before{content:"Bitte Tablet ins Querformat drehen";position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:24px;background:#0b1220;color:#fff;font-size:24px;font-weight:800;text-align:center}
 }
 
   </style>
@@ -264,6 +286,65 @@ function setButtonsEnabled(isOpen){
 function todayStr(){ return new Date().toISOString().slice(0,10); }
 
 /*********************
+ * EINHEITLICHE PRODUKT-ICONS
+ *********************/
+function productIconType(name){
+  const n = name.toLowerCase();
+  if(n.includes('café') || n.includes('punsch') || n.includes('tee')) return 'cup';
+  if(n.includes('capri')) return 'juice';
+  if(n.includes('soft')) return 'cupStraw';
+  if(n.includes('bier') || n.includes('harass') || n.includes('meter luft')) return 'beer';
+  if(n.includes('grapefruit')) return 'citrus';
+  if(n.includes('focus') || n.includes('redbull')) return 'energy';
+  if(n.includes('mate')) return 'bottle';
+  if(n.includes('smirnoff')) return 'bottle';
+  if(n.includes('apérol')) return 'cocktail';
+  if(n.includes('shot')) return 'shot';
+  if(n.includes('prosecco')) return 'champagne';
+  if(n.includes('wein')) return 'wine';
+  if(n.includes('wurst')) return 'hotdog';
+  if(n.includes('pommes')) return 'fries';
+  if(n.includes('nugget')) return 'nuggets';
+  if(n.includes('schnitzel')) return 'sandwich';
+  if(n.includes('hamburger')) return 'burger';
+  if(n.includes('glacé')) return 'icecream';
+  if(n.includes('süsses') || n.includes('salziges')) return 'snack';
+  if(n.includes('zigarette')) return 'cigarette';
+  if(n.includes('training')) return 'shirt';
+  if(n.includes('match')) return 'football';
+  if(n.includes('turnier')) return 'trophy';
+  return 'tag';
+}
+function productIconSvg(type){
+  const icons={
+    cup:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h12v7a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5Z"/><path d="M16 10h2a3 3 0 0 1 0 6h-2"/><path d="M7 4v2M11 3v3M15 4v2"/></svg>',
+    cupStraw:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8h11l-1 12H8Z"/><path d="m13 8 2-5h4"/><path d="M7 12h9"/></svg>',
+    juice:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h9l2 4-2 12H8L6 8Z"/><path d="M6 8h12"/><path d="m12 4 2-2"/></svg>',
+    beer:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h11v11a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3Z"/><path d="M16 10h2a3 3 0 0 1 0 6h-2"/><path d="M7 7V5a2 2 0 0 1 3-1 2.5 2.5 0 0 1 4 2v1"/><path d="M9 11v6M13 11v6"/></svg>',
+    citrus:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4v16M4 12h16M6.3 6.3l11.4 11.4M17.7 6.3 6.3 17.7"/></svg>',
+    energy:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 5 14h6l-1 8 9-13h-6Z"/></svg>',
+    bottle:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6v4l2 3v9a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-9l2-3Z"/><path d="M9 7h6M8 13h8"/></svg>',
+    cocktail:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16l-8 8Z"/><path d="M12 13v7M8 20h8"/><path d="m16 5 3-3"/></svg>',
+    shot:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10l-1 12H8Z"/><path d="M8 12h8"/></svg>',
+    champagne:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3h8l-1 8a3 3 0 0 1-6 0Z"/><path d="M12 14v6M8 20h8"/><circle cx="18" cy="4" r="1"/><circle cx="20" cy="8" r="1"/></svg>',
+    wine:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10l-1 7a4 4 0 0 1-8 0Z"/><path d="M12 14v6M8 20h8"/><path d="M8 9h8"/></svg>',
+    hotdog:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8c-3 2-3 6 0 8l12-8c3-2 3-6 0-8Z" transform="translate(1 4)"/><path d="M7 15c2-1 3 1 5 0s3 1 5 0"/></svg>',
+    fries:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 9-1-6M11 9V2M15 9l1-6M19 9l2-5"/><path d="M5 9h14l-2 12H7Z"/></svg>',
+    nuggets:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5c3-2 6 0 7 2 3-1 5 2 4 5 2 2 0 6-3 6-2 2-6 1-7-1-3 0-5-3-3-5-1-3 0-6 2-7Z"/><path d="M9 10h.01M14 14h.01"/></svg>',
+    sandwich:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 11 8-6 8 6Z"/><path d="M5 12h14l-2 7H7Z"/><path d="M7 15h10"/></svg>',
+    burger:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 10a7 5 0 0 1 14 0Z"/><path d="M4 13h16M6 17h12"/><path d="M5 17h14v2H5Z"/></svg>',
+    icecream:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10a4 4 0 1 1 8 0 3 3 0 0 1 1 5H7a3 3 0 0 1 1-5Z"/><path d="m9 15 3 7 3-7"/></svg>',
+    snack:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10l2 18H5Z"/><path d="M8 7h8M9 11h6"/><circle cx="10" cy="15" r="1"/><circle cx="14" cy="17" r="1"/></svg>',
+    cigarette:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 14h14v4H3Z"/><path d="M17 14h4v4h-4Z"/><path d="M17 5c3 1 1 4 4 5M14 4c3 2 0 4 3 6"/></svg>',
+    shirt:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 4-5 3 3 5 2-1v10h8V11l2 1 3-5-5-3a4 4 0 0 1-8 0Z"/></svg>',
+    football:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m12 7 3 2-1 4h-4L9 9Z"/><path d="m12 7-1-4M15 9l4-1M14 13l3 4M10 13l-3 4M9 9 5 8"/></svg>',
+    trophy:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h8v4a4 4 0 0 1-8 0Z"/><path d="M8 6H4v2a4 4 0 0 0 4 4M16 6h4v2a4 4 0 0 1-4 4M12 12v5M8 21h8M9 17h6"/></svg>',
+    tag:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12V5a2 2 0 0 1 2-2h7l9 9-9 9Z"/><circle cx="8" cy="8" r="1"/></svg>'
+  };
+  return icons[type] || icons.tag;
+}
+
+/*********************
  * RENDER: Artikel-Gruppen & Kacheln
  *********************/
 function renderItems(){
@@ -284,7 +365,8 @@ function renderItems(){
       btn.className = 'item';
       btn.type = 'button';
       btn.setAttribute('aria-label', `${item.name} hinzufügen`);
-      btn.innerHTML = `<div class="name">${item.name}</div><div class="price">${CHF.format(item.price)}</div>`;
+      const icon = productIconSvg(productIconType(item.name));
+      btn.innerHTML = `<span class="item-icon">${icon}</span><span class="item-text"><span class="name">${item.name}</span><span class="price">${CHF.format(item.price)}</span></span>`;
       btn.onclick = ()=> addToCart(item, 1);
       grid.appendChild(btn);
     });
