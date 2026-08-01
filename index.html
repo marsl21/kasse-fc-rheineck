@@ -28,7 +28,11 @@
     .wrap{max-width:1500px;margin-inline:auto;padding:16px 12px 120px}
     header{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:16px}
     h1{font-size:22px;margin:0;letter-spacing:.3px}
+    .header-info{display:flex;align-items:center;gap:10px}
     .badge{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);padding:6px 10px;border-radius:999px;font-size:12px}
+    .revenue-badge{display:flex;align-items:baseline;gap:7px;padding:8px 12px;border-radius:12px;background:linear-gradient(180deg,rgba(35,197,94,.24),rgba(22,163,74,.14));border:1px solid rgba(74,222,128,.35);white-space:nowrap}
+    .revenue-badge span{font-size:11px;color:#bbf7d0;font-weight:700}
+    .revenue-badge strong{font-size:18px;color:#fff}
     .grid{display:grid;gap:12px}
     .cols{grid-template-columns:1fr}
     @media(min-width:980px){.cols{grid-template-columns:minmax(0,3fr) minmax(270px,1fr);align-items:start}}
@@ -62,6 +66,10 @@
     .item:hover{background:var(--tile-hover)}
     .item:active{background:var(--tile-active)}
     .item:focus-visible{box-shadow:0 0 0 3px rgba(255,255,255,.18)}
+    .item.added{animation:itemAdded .28s ease}
+    .item.added .item-icon{animation:iconPop .28s ease}
+    @keyframes itemAdded{0%{transform:scale(1)}45%{transform:scale(.96);box-shadow:0 0 0 3px rgba(255,255,255,.16)}100%{transform:scale(1)}}
+    @keyframes iconPop{0%{transform:scale(1)}50%{transform:scale(1.18)}100%{transform:scale(1)}}
     .item-icon{width:40px;height:40px;flex:0 0 40px;display:grid;place-items:center;border-radius:11px;background:rgba(255,255,255,.10);color:#fff}
     .item-icon svg{width:27px;height:27px;display:block;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
     .item-text{min-width:0;display:flex;flex-direction:column;gap:3px}
@@ -141,7 +149,10 @@
   <div class="wrap">
     <header>
       <h1>FCR Kiosk Kasse</h1>
-      <span class="badge" id="statusBadge">Kein Tag geöffnet</span>
+      <div class="header-info">
+        <div class="revenue-badge"><span>Heute</span><strong id="liveRevenue">CHF 0.00</strong></div>
+        <span class="badge" id="statusBadge">Kein Tag geöffnet</span>
+      </div>
     </header>
 
     <div class="grid cols">
@@ -367,7 +378,7 @@ function renderItems(){
       btn.setAttribute('aria-label', `${item.name} hinzufügen`);
       const icon = productIconSvg(productIconType(item.name));
       btn.innerHTML = `<span class="item-icon">${icon}</span><span class="item-text"><span class="name">${item.name}</span><span class="price">${CHF.format(item.price)}</span></span>`;
-      btn.onclick = ()=> addToCart(item, 1);
+      btn.onclick = ()=> addToCart(item, 1, btn);
       grid.appendChild(btn);
     });
 
@@ -380,15 +391,23 @@ function renderItems(){
 /*********************
  * CART
  *********************/
-function addToCart(item, qty=1){
+function addToCart(item, qty=1, sourceBtn=null){
   const idx = cart.findIndex(x=>x.name===item.name && x.price===item.price);
   if(idx>=0){ cart[idx].qty += qty; }
   else { cart.push({name:item.name, price:item.price, qty}); }
+  if(sourceBtn){
+    sourceBtn.classList.remove('added');
+    void sourceBtn.offsetWidth;
+    sourceBtn.classList.add('added');
+    setTimeout(()=>sourceBtn.classList.remove('added'),300);
+  }
   renderCart();
 }
 function undoLast(){ cart.pop(); renderCart(); }
 function clearCart(){ cart = []; renderCart(); }
 function cartTotal(){ return cart.reduce((s,x)=> s + x.price*x.qty, 0); }
+function dayRevenue(){ return (dayData?.sales||[]).reduce((s,x)=>s+Number(x.total||0),0); }
+function updateLiveRevenue(){ document.getElementById('liveRevenue').textContent = CHF.format(dayRevenue()); }
 function renderCart(){
   const list = document.getElementById('cart');
   list.innerHTML = '';
@@ -408,6 +427,7 @@ function renderCart(){
   });
   document.getElementById('cartTotal').textContent = CHF.format(cartTotal());
   document.getElementById('salesCount').textContent = String(dayData?.sales?.length||0);
+  updateLiveRevenue();
   setButtonsEnabled(!!currentDay);
 }
 
@@ -445,6 +465,7 @@ function appendSales(lines){
   });
   list.prepend(container);
   document.getElementById('salesCount').textContent = String(dayData?.sales?.length||0);
+  updateLiveRevenue();
   setButtonsEnabled(!!currentDay);
 }
 function renderAllSales(){
