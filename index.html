@@ -233,6 +233,7 @@ const CATALOG = {
     { name:'Harass Bier',  price: 70.00 },
   ],
   'Essen': [
+    { name:'Hot Dog', price: 5.50 },
     { name:'Wurst',  price: 7.00 },
     { name:'Pommes',         price: 7.00 },
     { name:'Nuggets',         price: 7.00 },
@@ -316,6 +317,7 @@ function productIconType(name){
   if(n.includes('shot')) return 'shot';
   if(n.includes('prosecco')) return 'champagne';
   if(n.includes('wein')) return 'wine';
+  if(n.includes('hot dog')) return 'hotdog';
   if(n.includes('wurst')) return 'hotdog';
   if(n.includes('pommes')) return 'fries';
   if(n.includes('nugget')) return 'nuggets';
